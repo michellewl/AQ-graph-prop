@@ -518,6 +518,6 @@ def compute_error(alpha: float, threshold: float, L: Union[float, int],
     elif error_type == 'smape':
         error = smape_error(initial, final)
     else:
-        raise ValueError("Invalid error_type. Supported types: 'rmse', 'absolute'.")
+        raise ValueError("Invalid error_type. Supported types: 'rmse', 'absolute', 'smape'.")
 
     return float(error)  # Ensure the return value is a scalar
