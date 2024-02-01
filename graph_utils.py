@@ -286,6 +286,25 @@ def fill_and_refactor(gap_data: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFram
 
     return filled_data, refactored
 
+def euclidean_AM(filled_data: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute the Euclidean distance-based adjacency matrix.
+
+    Parameters:
+    - filled_data: DataFrame with filled gaps.
+
+    Returns:
+    - Euclidean distance-based adjacency matrix.
+    """
+    adjacency_matrix = ComputeAM(filled_data) # Compute adjacency matrix
+    euclidean_am = adjacency_matrix.euclidean_dist(filled_data) # Compute Euclidean distance-based adjacency matrix
+
+    mean = euclidean_am.mean().mean()  # Compute the mean of the Euclidean distance matrix
+    refactored = (mean / euclidean_am)
+    np.fill_diagonal(refactored.values, 0)  # Set diagonal elements to 0
+    
+    return refactored
+
 def get_L(matrix: np.ndarray) -> int:
     """
     Compute the smallest positive integer L (number of hops or graph iterations) for effective graph propagation.
