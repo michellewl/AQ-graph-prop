@@ -422,6 +422,54 @@ def get_complete_subset(df: pd.DataFrame, num_valid_values: int = 500) -> Tuple[
     # Return the complete subset and the column names
     return subset, max_cols
 
+def get_custom_subset(df: pd.DataFrame, station_names: List[str], num_valid_values: int = 500) -> pd.DataFrame:
+    """
+    Extract a custom subset from a DataFrame with missing values.
+
+    Parameters:
+    - df: DataFrame containing data.
+    - station_names: List of station (column) names to include in the subset.
+    - num_valid_values: Number of valid values required for a column to be considered (default is 500).
+
+    Returns:
+    - DataFrame containing the custom subset.
+    """
+    # Initialize variables to track the maximum size and index
+    max_size = 0
+    max_index = 0
+
+    # Loop through the DataFrame by rows, starting from index 0, with a step size of 5
+    for i in range(0, df.shape[0], 5):
+        # Create a boolean DataFrame indicating whether each element is null
+        test = df.iloc[i:].isnull()
+
+        # Reset the index of the boolean DataFrame and drop the old index
+        test.reset_index(drop=True, inplace=True)
+
+        # Find the index of the first occurrence of True (indicating missing value) in each column
+        res = test.eq(True).idxmax()
+
+        # Count the number of True values in each column and filter columns with count > num_valid_values
+        size = res[res > num_valid_values].size
+
+        # Update max_size and max_index if a larger valid column count is found
+        if size > max_size:
+            max_size = size
+            max_index = i
+
+    # Repeating the same process for the identified max_index
+    test = df.iloc[max_index:].isnull()
+    test.reset_index(drop=True, inplace=True)
+    res = test.eq(True).idxmax()
+
+    # Get the column names with valid values count > num_valid_values
+    max_cols = res[res > num_valid_values].keys()
+
+    # Extract the subset from the DataFrame using the identified columns and rows
+    subset = df[station_names].iloc[max_index:max_index + num_valid_values]
+
+    return subset
+
 def introduce_gaps(complete_subset: pd.DataFrame, num_missing_entries: int = 2000, seed: int = 0) -> Tuple[List[Tuple[int, int]], List[pd.Series], pd.DataFrame]:
     """
     Introduce gaps (replace random entries with NaNs) in a complete subset DataFrame.
