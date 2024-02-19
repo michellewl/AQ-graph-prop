@@ -240,7 +240,7 @@ def basic_graph_propagation(X: np.ndarray, A: np.ndarray, w: list, L: int, a: fl
 
     Returns:
     - Resulting matrix after graph propagation.
-    """
+    """x
     D_list = np.sum(A, axis=1)  # D matrix
     w = np.array(w)
     prop_matrix = np.diag(D_list**-a).dot(A).dot(np.diag(D_list**-b))  # DAD^(-1)
@@ -502,6 +502,49 @@ def introduce_gaps(complete_subset: pd.DataFrame, num_missing_entries: int = 200
     # Return information about introduced gaps, initial true values, and the modified subset
     return missing_entries, true_values, subset
 
+# Introduce gaps of varying length
+
+def introduce_gaps_consecutive(complete_subset: pd.DataFrame, num_missing_periods: int = 100, max_period_length: int = 10, seed: int = 0) -> Tuple[List[List[Tuple[int, int]]], List[pd.Series], pd.DataFrame]:
+    """
+    Introduce gaps (replace consecutive entries with NaNs) in a complete subset DataFrame.
+
+    Parameters:
+    - complete_subset: DataFrame representing the complete subset.
+    - num_missing_periods: Number of missing data periods to be introduced (default is 100).
+    - max_period_length: Maximum length of missing data periods (default is 10).
+    - seed: Seed for NumPy random number generator (default is 0).
+
+    Returns:
+    - Tuple containing:
+        - List of lists, where each sublist contains tuples representing the indices of the introduced gaps within a period.
+        - List of Series representing the initial true values before introducing gaps.
+        - DataFrame with introduced gaps.
+    """
+    np.random.seed(seed)
+    subset = complete_subset.copy()
+
+    # Replace consecutive entries with NaNs and store indices for each period
+    num_rows, num_cols = complete_subset.shape
+    missing_periods_indices = []
+
+    for _ in range(num_missing_periods):
+        start_row = np.random.randint(0, num_rows - max_period_length + 1)
+        start_col = np.random.randint(0, num_cols)
+        period_length = np.random.randint(1, max_period_length + 1)
+
+        missing_indices_period = [(start_row + i, start_col) for i in range(period_length)]
+        missing_periods_indices.append(missing_indices_period)
+
+        for row, col in missing_indices_period:
+            subset.iloc[row, col] = np.nan
+
+    # Store initial true values before introducing gaps
+    true_values = [complete_subset.iloc[row, col] for period in missing_periods_indices for row, col in period]
+
+    # Return information about introduced gaps, initial true values, and the modified subset
+    return missing_periods_indices, true_values, subset
+
+
 # ------------------------ #
 # Compute error metrics
 
@@ -546,7 +589,7 @@ def smape_error(initial, final):
     num = np.absolute(initial - final)
     den = (np.absolute(initial) + np.absolute(final)) / 2
     elems = num/den
-    return np.sum(elems) / elems.size
+    return (np.sum(elems) / elems.size)*100
 
 def compute_error(alpha: float, threshold: float, L: Union[float, int], 
                    initial: List[float], nan_entries: List[int], 
