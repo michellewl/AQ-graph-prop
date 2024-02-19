@@ -240,7 +240,7 @@ def basic_graph_propagation(X: np.ndarray, A: np.ndarray, w: list, L: int, a: fl
 
     Returns:
     - Resulting matrix after graph propagation.
-    """x
+    """
     D_list = np.sum(A, axis=1)  # D matrix
     w = np.array(w)
     prop_matrix = np.diag(D_list**-a).dot(A).dot(np.diag(D_list**-b))  # DAD^(-1)
