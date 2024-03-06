@@ -470,48 +470,89 @@ def get_custom_subset(df: pd.DataFrame, station_names: List[str], num_valid_valu
 
     return subset
 
-def introduce_gaps(complete_subset: pd.DataFrame, num_missing_entries: int = 2000, seed: int = 0) -> Tuple[List[Tuple[int, int]], List[pd.Series], pd.DataFrame]:
+# def introduce_gaps(complete_subset: pd.DataFrame, num_missing_entries: int = 2000, seed: int = 0) -> Tuple[List[Tuple[int, int]], List[pd.Series], pd.DataFrame]:
+#     """
+#     Introduce gaps (replace random entries with NaNs) in a complete subset DataFrame.
+
+#     Parameters:
+#     - complete_subset: DataFrame representing the complete subset.
+#     - num_missing_entries: Number of missing entries to be introduced (default is 2000).
+#     - seed: Seed for NumPy random number generator (default is 0).
+
+#     Returns:
+#     - Tuple containing:
+#         - List of tuples representing the indices of the introduced gaps.
+#         - List of Series representing the initial true values before introducing gaps.
+#         - DataFrame with introduced gaps.
+#     """
+#     np.random.seed(seed)
+#     subset = complete_subset.copy()
+
+#     # Replace random entries with NaNs
+#     num_entries = complete_subset.size  # Total number of entries in the subset (e.g., 14000 for a 500x28 DataFrame)
+#     missing_indices = np.random.choice(np.arange(num_entries), num_missing_entries, replace=False)
+#     missing_entries = [(num // complete_subset.shape[1], num % complete_subset.shape[1]) for num in missing_indices]
+
+#     # Store initial true values before introducing gaps
+#     true_values = []
+#     for entry in missing_entries:
+#         true_values.append(subset.iloc[entry])
+#         subset.iloc[entry] = np.nan
+
+#     # Return information about introduced gaps, initial true values, and the modified subset
+#     return missing_entries, true_values, subset
+
+# # Introduce gaps of varying length
+
+# def introduce_gaps_consecutive(complete_subset: pd.DataFrame, num_missing_periods: int = 100, max_period_length: int = 10, seed: int = 0) -> Tuple[List[List[Tuple[int, int]]], List[pd.Series], pd.DataFrame]:
+#     """
+#     Introduce gaps (replace consecutive entries with NaNs) in a complete subset DataFrame.
+
+#     Parameters:
+#     - complete_subset: DataFrame representing the complete subset.
+#     - num_missing_periods: Number of missing data periods to be introduced (default is 100).
+#     - max_period_length: Maximum length of missing data periods (default is 10).
+#     - seed: Seed for NumPy random number generator (default is 0).
+
+#     Returns:
+#     - Tuple containing:
+#         - List of lists, where each sublist contains tuples representing the indices of the introduced gaps within a period.
+#         - List of Series representing the initial true values before introducing gaps.
+#         - DataFrame with introduced gaps.
+#     """
+#     np.random.seed(seed)
+#     subset = complete_subset.copy()
+
+#     # Replace consecutive entries with NaNs and store indices for each period
+#     num_rows, num_cols = complete_subset.shape
+#     missing_periods_indices = []
+
+#     for _ in range(num_missing_periods):
+#         start_row = np.random.randint(0, num_rows - max_period_length + 1)
+#         start_col = np.random.randint(0, num_cols)
+#         period_length = np.random.randint(1, max_period_length + 1)
+
+#         missing_indices_period = [(start_row + i, start_col) for i in range(period_length)]
+#         missing_periods_indices.append(missing_indices_period)
+
+#         for row, col in missing_indices_period:
+#             subset.iloc[row, col] = np.nan
+
+#     # Store initial true values before introducing gaps
+#     true_values = [complete_subset.iloc[row, col] for period in missing_periods_indices for row, col in period]
+
+#     # Return information about introduced gaps, initial true values, and the modified subset
+#     return missing_periods_indices, true_values, subset
+
+def introduce_gaps(complete_subset: pd.DataFrame, proportion: float = 0.2, max_period_length: int = 1, species: str = None, plot_histogram: bool = False, seed: int = 0) -> Tuple[List[List[Tuple[int, int]]], List[pd.Series], pd.DataFrame]:
     """
-    Introduce gaps (replace random entries with NaNs) in a complete subset DataFrame.
+    Introduce gaps (replace single or consecutive entries with NaNs) in a complete subset DataFrame.
 
     Parameters:
     - complete_subset: DataFrame representing the complete subset.
-    - num_missing_entries: Number of missing entries to be introduced (default is 2000).
-    - seed: Seed for NumPy random number generator (default is 0).
-
-    Returns:
-    - Tuple containing:
-        - List of tuples representing the indices of the introduced gaps.
-        - List of Series representing the initial true values before introducing gaps.
-        - DataFrame with introduced gaps.
-    """
-    np.random.seed(seed)
-    subset = complete_subset.copy()
-
-    # Replace random entries with NaNs
-    num_entries = complete_subset.size  # Total number of entries in the subset (e.g., 14000 for a 500x28 DataFrame)
-    missing_indices = np.random.choice(np.arange(num_entries), num_missing_entries, replace=False)
-    missing_entries = [(num // complete_subset.shape[1], num % complete_subset.shape[1]) for num in missing_indices]
-
-    # Store initial true values before introducing gaps
-    true_values = []
-    for entry in missing_entries:
-        true_values.append(subset.iloc[entry])
-        subset.iloc[entry] = np.nan
-
-    # Return information about introduced gaps, initial true values, and the modified subset
-    return missing_entries, true_values, subset
-
-# Introduce gaps of varying length
-
-def introduce_gaps_consecutive(complete_subset: pd.DataFrame, num_missing_periods: int = 100, max_period_length: int = 10, seed: int = 0) -> Tuple[List[List[Tuple[int, int]]], List[pd.Series], pd.DataFrame]:
-    """
-    Introduce gaps (replace consecutive entries with NaNs) in a complete subset DataFrame.
-
-    Parameters:
-    - complete_subset: DataFrame representing the complete subset.
-    - num_missing_periods: Number of missing data periods to be introduced (default is 100).
+    - proportion: Proportion of missing data to be introduced (default is 0.2).
     - max_period_length: Maximum length of missing data periods (default is 10).
+    - species: Name of the species for which gaps are introduced (default is 'PM10').
     - seed: Seed for NumPy random number generator (default is 0).
 
     Returns:
@@ -523,26 +564,53 @@ def introduce_gaps_consecutive(complete_subset: pd.DataFrame, num_missing_period
     np.random.seed(seed)
     subset = complete_subset.copy()
 
+    # Calculate number of missing periods based on proportion and max_period_length
+    num_missing_periods = int(complete_subset.size * proportion) // max_period_length
+
     # Replace consecutive entries with NaNs and store indices for each period
     num_rows, num_cols = complete_subset.shape
     missing_periods_indices = []
-
     for _ in range(num_missing_periods):
+        # Select random column if species is not specified; otherwise, select species-specific column
+        if species is None:
+            start_col = np.random.randint(0, num_cols)
+        else:
+            column_names = complete_subset.columns
+            species_indices = [i for i, name in enumerate(column_names) if name.endswith(f'_{species}')]
+            start_col = np.random.randint(min(species_indices), max(species_indices) + 1)
         start_row = np.random.randint(0, num_rows - max_period_length + 1)
-        start_col = np.random.randint(0, num_cols)
         period_length = np.random.randint(1, max_period_length + 1)
 
         missing_indices_period = [(start_row + i, start_col) for i in range(period_length)]
         missing_periods_indices.append(missing_indices_period)
 
+        # Replace values with NaNs for introduced gaps
         for row, col in missing_indices_period:
             subset.iloc[row, col] = np.nan
 
     # Store initial true values before introducing gaps
     true_values = [complete_subset.iloc[row, col] for period in missing_periods_indices for row, col in period]
 
+    if plot_histogram:
+        # Calculate lengths of missing data periods
+        missing_periods_lengths = [len(period) for period in missing_periods_indices]
+        # Plot histogram
+        plt.hist(missing_periods_lengths, bins=range(1, max(missing_periods_lengths) + 1), align='left')
+        plt.xlabel('Length of missing data period (hours)')
+        plt.ylabel('Frequency')
+        if species is None:
+            plt.title('Histogram of artificially introduced missing data periods')
+        else:
+            plt.title(f'Histogram of artificially introduced missing data periods ({species})')
+        plt.show()
+
+    # Flatten the missing_periods_indices list of lists into a single list of tuples (this is necessary for downstream code)
+    missing_periods_indices = [index for sublist in missing_periods_indices for index in sublist]
+
     # Return information about introduced gaps, initial true values, and the modified subset
     return missing_periods_indices, true_values, subset
+
+
 
 
 # ------------------------ #
@@ -631,3 +699,16 @@ def compute_error(alpha: float, threshold: float, L: Union[float, int],
         raise ValueError("Invalid error_type. Supported types: 'rmse', 'absolute', 'smape'.")
 
     return float(error)  # Ensure the return value is a scalar
+
+# ------------------------ #
+
+# Normalise data between 0 and 1
+
+def normalise_data(data):
+    mins = data.min()
+    maxs = data.max()
+    normalized_data = (data - mins) / (maxs - mins)
+    return normalized_data, mins, maxs
+
+def denormalise_data(normalized_data, mins, maxs):
+    return normalized_data * (maxs - mins) + mins
