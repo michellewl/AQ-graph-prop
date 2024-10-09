@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from graph_utils import *
 
-species = "NO2"
+species = "PM10"
 region = "London"
 start_date = "1996-01-01"
 end_date = "2021-01-01"
@@ -52,7 +52,7 @@ test_set_covid = complete_subset_covid.copy() # Use all of the lockdown data as 
 
 # Prepare DataFrames to store the results
 df_missing_proportions = pd.DataFrame(columns=['random_seed', 'train_missing%', 'test_missing%', 'COVID_missing%'])
-df_tuned_hyperparameters = pd.DataFrame(columns=['random_Seed', 'alpha', 'L_hops', 'threshold'])
+df_tuned_hyperparameters = pd.DataFrame(columns=['random_seed', 'alpha', 'L_hops', 'threshold'])
 df_smape_test = pd.DataFrame(columns=['random_seed', 'station_annual_mean', 'linear', 'poly_order_2', 'poly_order_3', 'graph_propagation'])
 df_smape_covid = pd.DataFrame(columns=['random_seed', 'station_annual_mean', 'linear', 'poly_order_2', 'poly_order_3', 'graph_propagation'])
 
@@ -140,7 +140,7 @@ for random_seed in tqdm(random_seeds, desc="Imputing with random seeds"):
     initialise_threshold = 1.06
     # Hyperparameter tuning
     alpha_err = []
-    alpha_range = np.linspace(0.0, 0.6, 101)
+    alpha_range = np.linspace(1.e-6, 0.6, 101)
     for alpha in alpha_range:
         # Compute error for each alpha value
         err = compute_error(alpha, initialise_threshold, initialise_hop, true_values_train, gap_indices_train, filled_data_train, euclidean_train)
