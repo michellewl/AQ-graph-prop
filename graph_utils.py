@@ -9,6 +9,7 @@ from shutil import rmtree
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import squareform, pdist, cosine
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 from scipy.optimize import minimize
 import matplotlib
 from matplotlib import cm
@@ -250,15 +251,24 @@ def basic_graph_propagation(X: np.ndarray, A: np.ndarray, w: list, L: int, a: fl
     r = X
     for i in range(L):
         Y_i = w[i:].sum()
+        # print(f"w[i+1:].sum() : {w[i+1:].sum()}")
+        # print(f"type(w[i+1:]): {type(w[i+1:])}")
         Y_iplus = w[i+1:].sum()
+        # print(f"Y_iplus: {Y_iplus}")
 
         # Update pi estimate
+        if np.isnan(Y_i) or np.isnan(w[i]):
+            print(f"Invalid values: w[i]={w[i]}, Y_i={Y_i}")
         q = (w[i]/Y_i) * r
         pi += q
 
         # Update r
+        if Y_iplus == 0:
+            print(f"Invalid values at iteration {i} due to Y_iplus=0")
         r = (Y_i/Y_iplus) * prop_matrix.dot(r.T).T
-
+    
+    if w[L:].sum() == 0:  # Check if the sum is zero before the final computation
+        print(f"Invalid value for q due to zero denominator in w[L:].sum()")
     q = w[L]/w[L:].sum() * r
     pi += q
     return pi
@@ -552,7 +562,7 @@ def introduce_gaps(complete_subset: pd.DataFrame, proportion: float = 0.2, max_p
     - complete_subset: DataFrame representing the complete subset.
     - proportion: Proportion of missing data to be introduced (default is 0.2).
     - max_period_length: Maximum length of missing data periods (default is 10).
-    - species: Name of the species for which gaps are introduced (default is 'PM10').
+    - species: Name of the species for which gaps are introduced (default is None).
     - seed: Seed for NumPy random number generator (default is 0).
 
     Returns:
@@ -707,8 +717,21 @@ def compute_error(alpha: float, threshold: float, L: Union[float, int],
 def normalise_data(data):
     mins = data.min()
     maxs = data.max()
-    normalized_data = (data - mins) / (maxs - mins)
-    return normalized_data, mins, maxs
+    normalised_data = (data - mins) / (maxs - mins)
+    return normalised_data, mins, maxs
 
-def denormalise_data(normalized_data, mins, maxs):
-    return normalized_data * (maxs - mins) + mins
+def denormalise_data(normalised_data, mins, maxs):
+    return normalised_data * (maxs - mins) + mins
+
+# ------------------------------------------------------------------------------------------------------ #
+# Additional results statistics
+
+def compute_metrics(y_true, y_pred):
+    y_true = np.array(y_true)
+    y_pred = np.array(y_pred)
+    
+    r2 = r2_score(y_true, y_pred)
+    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+    mae = mean_absolute_error(y_true, y_pred)
+    
+    return r2, rmse, mae
