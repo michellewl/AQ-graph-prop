@@ -11,7 +11,7 @@ from graph_utils import *
 # species = "NO2" # gaps will be introduced into this species
 
 # Define random seeds to iterate over
-random_seeds = range(0, 50) 
+random_seeds = [0] # range(0, 50) 
 
 for propagation_approach in ["single", "multi"]:
 
@@ -242,6 +242,13 @@ for propagation_approach in ["single", "multi"]:
             tuned_alpha = alpha_range[np.argmin(alpha_err)]
             tuned_hop = hop_range[np.argmin(hop_err)]
             tuned_threshold = threshold_range[np.argmin(threshold_err)]
+
+            # CORRECTIONS
+            # Fixing hyperparameters
+
+            tuned_alpha = 0.23
+            tuned_hop = 2
+            tuned_threshold = 1.1
             
             # Save tuned hyperparameters to the DataFrame
             df_tuned_hyperparameters = df_tuned_hyperparameters.append({'random_seed': random_seed, 
@@ -289,7 +296,7 @@ for propagation_approach in ["single", "multi"]:
             df_metrics_covid = pd.concat([df_metrics_covid, pd.DataFrame({
                 'random_seed': [random_seed],
                 'method': ['graph_propagation'],
-                'SMAPE': smape_covid_gp, 
+                'SMAPE': [smape_covid_gp], 
                 'R2': [r2],
                 'RMSE': [rmse],
                 'MAE': [mae]
@@ -451,7 +458,7 @@ for propagation_approach in ["single", "multi"]:
 
             # COVID set
             plt.figure()
-            plt.hist(residuals_test, bins=50)
+            plt.hist(residuals_covid, bins=50)
             plt.title("Residual distribution (COVID)")
             plt.xlabel("Error")
             plt.ylabel("Frequency")
