@@ -496,20 +496,29 @@ for propagation_approach in ["single", "multi"]:
         for file in csv_files:
             print("\n", file)
             filepath = path.join(output_folder, file)
-
             df = pd.read_csv(filepath)
 
-            # Keep only numeric columns for aggregation
-            numeric_df = df.select_dtypes(include=[np.number])
+            if "method" in df.columns:
+                summary = df.groupby("method")[["SMAPE", "R2", "RMSE", "MAE"]].agg(["mean", "std"])
 
-            mean_df = numeric_df.mean()
-            std_df = numeric_df.std()
+                # Format as "mean ± std"
+                formatted = summary.copy()
+                for col in ["SMAPE", "R2", "RMSE", "MAE"]:
+                    formatted[(col, "mean")] = summary[(col, "mean")].round(2).astype(str)
+                    formatted[(col, "std")] = summary[(col, "std")].round(2).astype(str)
+                    formatted[col] = formatted[(col, "mean")] + " ± " + formatted[(col, "std")]
 
-            decimal_places = 2
-            combined_df = mean_df.round(decimal_places).astype(str) + " ± " + std_df.round(decimal_places).astype(str)
+                # Keep only combined columns
+                final_df = formatted[[col for col in ["SMAPE", "R2", "RMSE", "MAE"]]]
 
-            print(combined_df)
+            else:
+                # fallback for other CSVs (your existing behaviour)
+                numeric_df = df.select_dtypes(include=[np.number]).drop(columns=["random_seed"], errors="ignore")
+                mean_df = numeric_df.mean()
+                std_df = numeric_df.std()
+                final_df = mean_df.round(2).astype(str) + " ± " + std_df.round(2).astype(str)
 
-            combined_df.to_csv(path.join(output_folder, f"summary_{file}"), index=True)
+            final_df.to_csv(path.join(output_folder, f"summary_{file}"))
+
         print(f"Saved results to {output_folder}")
 
